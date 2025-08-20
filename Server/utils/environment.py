@@ -26,7 +26,7 @@ class TradingEnv:
         elif action == 2 and self.position > 0:
             self.position -= 1
             self.balance += price
-
+            
         reward = self.balance + self.position * price - self.initial_balance
         self.current_step += 1
         if self.current_step >= len(self.data):

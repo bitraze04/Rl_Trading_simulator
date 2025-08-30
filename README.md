@@ -350,6 +350,5 @@ agent.train(env, episodes=100)
 
 ## Acknowledgements
 
-- OpenAI for Gym
 - Contributors to Stable Baselines3
 - Community feedback

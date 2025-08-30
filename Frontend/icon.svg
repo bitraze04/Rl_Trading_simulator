@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#0B1B3A"/>
+      <stop offset="1" stop-color="#0E254F"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="64" fill="url(#g)"/>
+  <!-- Upward arrow composed of bars + arrowhead -->
+  <g fill="none" stroke="#19C37D" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M96 352 L192 288 L272 320 L384 208" stroke-width="36"/>
+    <path d="M352 208 L400 208 L400 256" stroke-width="36"/>
+    <path d="M384 208 L440 208 L440 264" stroke-width="36"/>
+    <!-- Arrowhead -->
+    <path d="M352 192 L416 128 L480 192" stroke-width="36"/>
+  </g>
+</svg>

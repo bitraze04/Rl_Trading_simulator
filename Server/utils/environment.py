@@ -1,37 +1,47 @@
 import numpy as np
 
 class TradingEnv:
-    def __init__(self, data, initial_balance=1000):
-        self.data = np.asarray(data)
-        self.initial_balance = initial_balance
+    def __init__(self, data, initial_balance=1000, tx_cost=0.0):
+        self.data = np.asarray(data, dtype=float)
+        self.initial_balance = float(initial_balance)
+        self.tx_cost = float(tx_cost)
         self.reset()
 
     def reset(self):
-        self.balance = self.initial_balance
+        self.balance = float(self.initial_balance)
         self.position = 0
         self.current_step = 0
+        self.last_value = self.initial_balance
         return self._get_state()
 
     def _get_state(self):
-        # Simple state: [current_price, balance, position]
-        return np.array([self.data[self.current_step], self.balance, self.position])
+        price = self.data[self.current_step]
+        return np.array([price, self.balance, self.position], dtype=float)
 
     def step(self, action):
         done = False
         price = self.data[self.current_step]
-        # Actions: 0 = Hold, 1 = Buy, 2 = Sell
-        if action == 1 and self.balance >= price:
-            self.position += 1
-            self.balance -= price
-        elif action == 2 and self.position > 0:
-            self.position -= 1
-            self.balance += price
-            
-        reward = self.balance + self.position * price - self.initial_balance
+
+        if action == 1:
+            total_cost = price * (1.0 + self.tx_cost)
+            if self.balance >= total_cost:
+                self.position += 1
+                self.balance -= total_cost
+        elif action == 2:
+            if self.position > 0:
+                proceeds = price * (1.0 - self.tx_cost)
+                self.position -= 1
+                self.balance += proceeds
+
+        current_value = self.balance + self.position * price
+        reward = current_value - self.last_value
+        self.last_value = current_value
+
         self.current_step += 1
         if self.current_step >= len(self.data):
             done = True
-            next_state = np.array([price, self.balance, self.position])
+            next_state = np.array([price, self.balance, self.position], dtype=float)
         else:
             next_state = self._get_state()
-        return next_state, reward, done, {}
+
+        return next_state, float(reward), done, {}

@@ -4,7 +4,7 @@ const API_BASE = "http://127.0.0.1:5000";
 let trainingInterval = null;
 let isTraining = false;
 let uploadOk = false;
-// ADDED: keep a handle to the chart so we can safely recreate it
+// keep a handle to the chart so we can safely recreate it
 let portfolioChart = null;
 
 // DOM elements
@@ -157,7 +157,6 @@ async function startTraining() {
     showErrorModal('Please upload a CSV before starting training.');
     return;
   }
-  // Read current form values; these override server defaults
   const params = {
     initialBalance: Number(inputInitialBalance.value),
     episodes: Number(inputEpisodes.value),
@@ -176,6 +175,7 @@ async function startTraining() {
   stopTrainingBtn.disabled = false;
   showTrainingProgress(0, 0, 'Starting...');
   isTraining = true;
+
   const res = await robustFetch(`${API_BASE}/start-training`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -193,6 +193,7 @@ async function startTraining() {
   setActiveTab('training');
   pollTrainingStatus();
 }
+
 async function stopTraining() {
   if (!isTraining) return;
   await robustFetch(`${API_BASE}/stop-training`, { method: 'POST' });
@@ -201,6 +202,7 @@ async function stopTraining() {
   startTrainingBtn.disabled = !uploadOk;
   stopTrainingBtn.disabled = true;
 }
+
 function pollTrainingStatus() {
   clearInterval(trainingInterval);
   trainingInterval = setInterval(checkTrainingStatus, 1500);
@@ -227,6 +229,7 @@ async function checkTrainingStatus() {
     stopTrainingBtn.disabled = true;
     isTraining = false;
     hideTrainingProgress();
+
     if (state.results) {
       renderResults(state.results);
       setActiveTab('results');
@@ -258,15 +261,12 @@ function hideTrainingProgress() {
 
 // Results
 function safeNum(v) { return (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : 'N/A'; }
-
-// CHANGED: renderResults coerces data to numbers and ensures a canvas exists
 function renderResults(results) {
   if (!results) {
     resultsContent.innerHTML = `<p class="no-results">No training results available.</p>`;
     return;
   }
 
-  // Coerce and validate series for Chart.js
   const raw = Array.isArray(results.portfolioHistory) ? results.portfolioHistory : [];
   const portfolio = raw.map(v => (v == null ? null : Number(v))).filter(v => Number.isFinite(v));
 
@@ -287,7 +287,6 @@ function renderResults(results) {
     </div>
   `;
 
-  // Always inject a canvas so the chart renders inline (no popups)
   const chartSection = `
     <div class="chart-container">
       <h4>Portfolio Value Over Time</h4>
@@ -306,12 +305,9 @@ function renderResults(results) {
 
   if (portfolio.length > 0) renderPortfolioChart(portfolio);
 }
-
-// CHANGED: renderPortfolioChart safely recreates the chart instance
 function renderPortfolioChart(portfolio) {
   if (!window.Chart || !document.getElementById('portfolio-chart')) return;
 
-  // Destroy any existing chart to avoid overlay or silent failures
   if (portfolioChart && typeof portfolioChart.destroy === 'function') {
     portfolioChart.destroy();
   }

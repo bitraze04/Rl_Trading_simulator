@@ -70,7 +70,7 @@ app.post("/upload-csv", upload.single("file"), (req, res) => {
 
 // Start training
 app.post("/start-training", (req, res) => {
-  // Clear stale results
+  // Clear stale results so UI doesn't jump to 100% immediately
   if (fs.existsSync(RESULTS_JSON)) {
     try { fs.unlinkSync(RESULTS_JSON); } catch {}
   }
@@ -87,7 +87,7 @@ app.post("/start-training", (req, res) => {
   const user = req.body || {};
   const merged = { ...DEFAULT_PARAMS, ...Object.fromEntries(Object.entries(user).filter(([, v]) => v != null)) };
 
-  // Initialize live training state
+  // REQUIRED: mark training as started so the progress bar shows
   trainingState.is_training = true;
   trainingState.progress = 0;
   trainingState.current_episode = 0;
@@ -98,7 +98,7 @@ app.post("/start-training", (req, res) => {
   const PYTHON_BIN = process.env.PYTHON_BIN || "python";
   const pythonParams = { ...merged, dataPath: DATA_FILE };
 
-  // IMPORTANT: -u makes Python unbuffered so stdout arrives immediately
+  // Use -u (unbuffered) so stdout is real-time
   const child = spawn(PYTHON_BIN, ["-u", "main.py", JSON.stringify(pythonParams)], {
     stdio: ["ignore", "pipe", "pipe"],
     cwd: path.resolve(__dirname)
@@ -110,11 +110,15 @@ app.post("/start-training", (req, res) => {
       try {
         const msg = JSON.parse(line);
         if (msg.event === "progress") {
+          // Update live progress
           trainingState.current_episode = Number(msg.episode) || trainingState.current_episode;
           const tot = Number(msg.total) || trainingState.total_episodes || 1;
           trainingState.total_episodes = tot;
           trainingState.progress = Math.max(0, Math.min(100, Math.round((trainingState.current_episode / tot) * 100)));
         } else if (msg.event === "wrote_results") {
+          // REQUIRED: mark as finished on wrote_results
+          trainingState.is_training = false;
+          trainingState.progress = 100;
           console.log("Python wrote results:", msg.path);
         }
       } catch {
@@ -130,12 +134,13 @@ app.post("/start-training", (req, res) => {
   });
 
   child.on("close", (code) => {
+    // REQUIRED: ensure finish state on process close as fallback
     trainingState.is_training = false;
+
     console.log("Python exited with code", code);
     console.log("Expecting results at:", RESULTS_JSON, "exists?", fs.existsSync(RESULTS_JSON));
     console.log("Server __dirname:", __dirname, "process.cwd():", process.cwd());
 
-    trainingState.is_training = false;
     if (fs.existsSync(RESULTS_JSON)) {
       try {
         const results = JSON.parse(fs.readFileSync(RESULTS_JSON, "utf-8"));
@@ -153,7 +158,7 @@ app.post("/start-training", (req, res) => {
   return res.json({ message: "Training started" });
 });
 
-// Status
+// Status: return live training state; include results if present
 app.get("/training-status", (_req, res) => {
   if (!trainingState.results && fs.existsSync(RESULTS_JSON)) {
     try {
